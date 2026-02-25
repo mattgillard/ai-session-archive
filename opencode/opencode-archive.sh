@@ -1,50 +1,73 @@
 #!/usr/bin/env bash
+# Archive opencode sessions to this directory
+# Requires bun and the opencode CLI
 set -euo pipefail
 
-ARCHIVE_ROOT="$HOME/dev/opencode-archive"
+ARCHIVE_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOG="$ARCHIVE_ROOT/opencode-archive.log"
-DRY_RUN=0
+DRY_RUN=false
 
 for arg in "$@"; do
   case "$arg" in
     -n|--dry-run)
-      DRY_RUN=1
+      DRY_RUN=true
       ;;
     *)
       ;;
   esac
 done
 
-mkdir -p "$ARCHIVE_ROOT"
+file_mtime() {
+  if [[ "$(uname -s)" == "Darwin" ]]; then
+    stat -f %m "$1"
+  else
+    stat -c %Y "$1"
+  fi
+}
+
+epoch_to_touch() {
+  if [[ "$(uname -s)" == "Darwin" ]]; then
+    date -r "$1" "+%Y%m%d%H%M.%S"
+  else
+    date -d "@$1" "+%Y%m%d%H%M.%S"
+  fi
+}
 
 log() {
-  printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" | tee -a "$LOG"
+  if [[ "$DRY_RUN" == true ]]; then
+    echo "[DRY-RUN] $*"
+  else
+    printf '[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*" | tee -a "$LOG"
+  fi
 }
 
-opencode session list --format json 2>>"$LOG" | bun -e '
-const sessions = await new Response(process.stdin).json()
-for (const s of sessions) {
-  process.stdout.write(`${s.id}\t${s.directory}\t${s.updated}\n`)
-}
-' | while IFS=$'\t' read -r id dir updated; do
+[[ "$DRY_RUN" == true ]] && log "Dry run — no files will be written"
+
+copied=0
+skipped=0
+
+while IFS=$'\t' read -r id dir updated; do
   slug="-${dir#/}"
   slug="${slug//\//-}"
   destDir="$ARCHIVE_ROOT/$slug"
   dest="$destDir/$id.jsonl"
-  mkdir -p "$destDir"
 
   if [[ -f "$dest" ]]; then
-    mtime=$(stat -f %m "$dest")
+    mtime=$(file_mtime "$dest")
     if (( updated / 1000 <= mtime )); then
       log "SKIP    $dest (up to date)"
+      ((skipped++)) || true
       continue
     fi
   fi
 
-  if [[ $DRY_RUN -eq 1 ]]; then
+  if [[ "$DRY_RUN" == true ]]; then
     log "DRYRUN  $dest"
+    ((copied++)) || true
     continue
   fi
+
+  mkdir -p "$destDir"
 
   tmpjson="$(mktemp "$destDir/.opencode-archive.XXXXXX.json")"
   tmp="$(mktemp "$destDir/.opencode-archive.XXXXXX")"
@@ -70,7 +93,15 @@ process.stdout.write(lines + "\n")
   rm -f "$tmpjson"
   mv "$tmp" "$dest"
 
-  touch -t "$(date -r "$((updated / 1000))" "+%Y%m%d%H%M.%S")" "$dest"
+  touch -t "$(epoch_to_touch "$((updated / 1000))")" "$dest"
 
   log "WRITE   $dest"
-done
+  ((copied++)) || true
+done < <(opencode session list --format json 2>>"$LOG" | bun -e '
+const sessions = await new Response(process.stdin).json()
+for (const s of sessions) {
+  process.stdout.write(`${s.id}\t${s.directory}\t${s.updated}\n`)
+}
+')
+
+log "Done. Copied/updated: $copied, Skipped (up to date): $skipped"

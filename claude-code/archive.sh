@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Archive Claude Code sessions from ~/.claude/projects/ to this directory
-# Organizes by YYYY-MM based on file modification date, preserving project structure
+# Mirrors the source directory structure, preserving file timestamps
 
 set -euo pipefail
 
@@ -14,7 +14,7 @@ SOURCE_DIR="$HOME/.claude/projects"
 LOG="$ARCHIVE_DIR/archive.log"
 
 log() {
-  if $DRY_RUN; then
+  if [[ "$DRY_RUN" == true ]]; then
     echo "[DRY-RUN] $*"
   else
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG"
@@ -26,7 +26,7 @@ if [[ ! -d "$SOURCE_DIR" ]]; then
   exit 1
 fi
 
-$DRY_RUN && log "Dry run — no files will be written"
+[[ "$DRY_RUN" == true ]] && log "Dry run — no files will be written"
 
 copied=0
 skipped=0
@@ -39,7 +39,7 @@ while IFS= read -r -d '' file; do
     # Already archived - skip unless source is newer
     if [[ "$file" -nt "$dest" ]]; then
       log "UPDATE  $dest"
-      $DRY_RUN || cp -p "$file" "$dest"
+      [[ "$DRY_RUN" == true ]] || cp -p "$file" "$dest"
       ((copied++)) || true
     else
       log "SKIP    $dest (up to date)"
@@ -47,7 +47,7 @@ while IFS= read -r -d '' file; do
     fi
   else
     log "COPY    $dest"
-    if ! $DRY_RUN; then
+    if [[ "$DRY_RUN" != true ]]; then
       mkdir -p "$(dirname "$dest")"
       cp -p "$file" "$dest"
     fi
