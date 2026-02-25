@@ -25,11 +25,11 @@ Mirrors `~/.claude/projects/` directly:
 
 ```
 claude-code-archive/
-  -Users-matt/
+  -Users-<username>/
     <session-uuid>.jsonl
-  -Users-matt-dev/
+  -Users-<username>-dev/
     <session-uuid>.jsonl
-  -Users-matt-dev-some-project/
+  -Users-<username>-dev-some-project/
     <session-uuid>.jsonl
     <session-uuid>/
       subagents/
@@ -42,19 +42,19 @@ The script runs daily at 23:00 via a launchd agent.
 
 **Plist location:**
 ```
-~/Library/LaunchAgents/com.matt.claude-code-archive.plist
+~/Library/LaunchAgents/com.<username>.claude-code-archive.plist
 ```
 
 **Manage the job:**
 ```bash
 # Load / register (survives reboots)
-launchctl load ~/Library/LaunchAgents/com.matt.claude-code-archive.plist
+launchctl load ~/Library/LaunchAgents/com.<username>.claude-code-archive.plist
 
 # Unload / deregister
-launchctl unload ~/Library/LaunchAgents/com.matt.claude-code-archive.plist
+launchctl unload ~/Library/LaunchAgents/com.<username>.claude-code-archive.plist
 
 # Trigger manually without waiting for 23:00
-launchctl start com.matt.claude-code-archive
+launchctl start com.<username>.claude-code-archive
 
 # Check status
 launchctl list | grep claude-code-archive

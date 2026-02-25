@@ -26,18 +26,18 @@ bash ~/dev/opencode-archive/opencode-archive.sh --dry-run
 
 LaunchAgent file:
 
-- `~/Library/LaunchAgents/com.matt.opencode-archive.plist`
+- `~/Library/LaunchAgents/com.<username>.opencode-archive.plist`
 
 Default schedule: daily at 23:00.
 
 Useful commands:
 
 ```bash
-launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.matt.opencode-archive.plist
-launchctl enable gui/$(id -u)/com.matt.opencode-archive
-launchctl kickstart -k gui/$(id -u)/com.matt.opencode-archive
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.<username>.opencode-archive.plist
+launchctl enable gui/$(id -u)/com.<username>.opencode-archive
+launchctl kickstart -k gui/$(id -u)/com.<username>.opencode-archive
 
-launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.matt.opencode-archive.plist
+launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.<username>.opencode-archive.plist
 ```
 
 ## Notes
